@@ -3,6 +3,7 @@ namespace LastCard
     using System.Collections.Generic;
     using UnityEngine;
     using System.Linq;
+    using System;
 
     public class CardsPile : MonoBehaviour
     {
@@ -17,6 +18,16 @@ namespace LastCard
         public bool SkipTurn { get; set; } = false;
         public bool Reversed { get; set; } = false;
 
+        private void Awake() 
+        {
+            MainMenuMaster menu = MainMenuMaster.mainMenuMaster;
+
+            if (menu.GameIsLoading)
+            {
+                AddCards(menu.loader.Data.Pile.cards);
+            }
+        }
+
         public void Init(CardsDeck cardsDeck)
         {
             deck = cardsDeck;
@@ -30,6 +41,16 @@ namespace LastCard
             }
 
             return cards.Last();
+        }
+
+        private void AddCards(List<Card> cardsToAdd)
+        {
+            for (var i = 0; i < cardsToAdd.Count; i++)
+            {
+                Card newCard = Instantiate(cardsToAdd[i], transform);
+                newCard.flipper.Flip();
+                cards.Add(newCard);
+            }
         }
 
         public void PushCard(Card card)

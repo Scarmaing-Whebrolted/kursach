@@ -19,6 +19,7 @@ namespace LastCard
 
         public string Winner;
         public List<string> RunnerUpps;
+        public GameSaver saver;
 
         private void Awake() 
         {
@@ -35,6 +36,11 @@ namespace LastCard
             {
                 Destroy(gameObject);
             }
+        }
+
+        public void Save()
+        {
+            saver.Save(director);
         }
 
         public void SetWinner(Player player)

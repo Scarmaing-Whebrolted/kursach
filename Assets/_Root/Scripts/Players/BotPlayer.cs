@@ -22,11 +22,19 @@ namespace LastCard
         public override async Task MakeTurn()
         {
             Debug.Log("Bot turn");
+
+            if (cards.Count != 1 && !resolver.CanPushCard(GetCardToPush()))
+            {
+                border.enabled = true;
+                Task turnDuration = Task.Delay(TimeSpan.FromSeconds(2));
+                await turnDuration;
+                border.enabled = false;
+            }
             
-            border.enabled = true;
-            Task turnDuration = Task.Delay(TimeSpan.FromSeconds(2));
-            await turnDuration;
-            border.enabled = false;
+            // border.enabled = true;
+            // Task turnDuration = Task.Delay(TimeSpan.FromSeconds(2));
+            // await turnDuration;
+            // border.enabled = false;
             bool turnIsMade = false;
 
             List<Card> tempCards = new List<Card>(cards);

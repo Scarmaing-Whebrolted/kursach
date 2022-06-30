@@ -12,11 +12,9 @@ namespace LastCard
         [SerializeField]
         private RulesResolver rulesResolver;
         
-        [SerializeField]
-        private CardsDeck cardsDeck;
+        public CardsDeck cardsDeck;
 
-        [SerializeField]
-        private CardsPile cardsPile;
+        public CardsPile cardsPile;
 
         [SerializeField]
         private UserPlaceholder userHolder;
@@ -30,13 +28,22 @@ namespace LastCard
         [SerializeField]
         private UserPlayer userPrefab;
 
-        private List<Player> players = new List<Player>();
-        private int playerIndex;
+        public List<Player> Players = new List<Player>();
+        public int PlayerIndex;
         private bool gameIsFinished = false;
 
         public int BotsCount;
         public int InitialCardsCount;
         public int MaximalPointsCount;
+
+        // public void LoadGame(SaveData data)
+        // {
+        //     Players = data.Players;
+        //     PlayerIndex = data.PlayerIndex;
+        //     BotsCount = data.BotsCount;
+        //     InitialCardsCount = data.InitialCardsCount;
+        //     MaximalPointsCount = data.MaximalPointsCount;
+        // }
 
         private void Awake() 
         {
@@ -46,8 +53,23 @@ namespace LastCard
 
         private void Start()
         {
-            SpawnPlayers();
-            DistributeCards();
+            MainMenuMaster menu = MainMenuMaster.mainMenuMaster;
+
+            if (MainMenuMaster.mainMenuMaster.GameIsLoading)
+            {
+                cardsPile = menu.loader.Data.Pile;
+                cardsDeck = menu.loader.Data.Deck;
+                
+                SpawnPlayers();
+
+                MainMenuMaster.mainMenuMaster.GameIsLoading = false;
+            }
+            else
+            {
+                SpawnPlayers();
+                DistributeCards();
+            }
+
             StartGame();
         }
 
@@ -61,26 +83,68 @@ namespace LastCard
 
         private void SpawnPlayers()
         {
-            UserPlayer user = userHolder.PlaceUser(userPrefab);           
-            user.Init(rulesResolver, cardsDeck, cardsPile);
-            players.Add(user);
-            
-            for (var i = 0; i < MainMenuMaster.mainMenuMaster.BotsCount; i++)
+            MainMenuMaster menu = MainMenuMaster.mainMenuMaster;
+
+            if (menu.GameIsLoading)
             {
-                BotPlayer bot = botHolders[i].PlaceBot(botPrefab);
-                bot.Init(rulesResolver, cardsDeck, cardsPile);
-                bot.name += $": {i + 1}";
-                players.Add(bot);
+                UserPlayer userToInstantiate = menu.loader.Data.Players.Find(player => player is UserPlayer) 
+                    as UserPlayer;
+                SpawnUser(userToInstantiate);
+            }
+            else
+            {
+                SpawnUser(userPrefab);
+            }
+
+            if (menu.GameIsLoading)
+            {
+                List<Player> savedPlayers = menu.loader.Data.Players;
+                savedPlayers.Remove(savedPlayers.Find(player => player is UserPlayer));
+
+                SpawnBots(savedPlayers.Select(player => (BotPlayer)player).ToList());
+            }
+            else
+            {
+                SpawnBots(botPrefab);
             }
 
             ImprovePlayersNames();
+        }
+
+        private void SpawnUser(UserPlayer userPlayer)
+        {
+            UserPlayer user = userHolder.PlaceUser(userPlayer);
+            user.Init(rulesResolver, cardsDeck, cardsPile);
+            Players.Add(user);
+        }
+
+        private void SpawnBots(List<BotPlayer> botPrefabs)
+        {
+            for (var i = 0; i < MainMenuMaster.mainMenuMaster.BotsCount; i++)
+            {
+                BotPlayer bot = botHolders[i].PlaceBot(botPrefabs[i]);
+                bot.Init(rulesResolver, cardsDeck, cardsPile);
+                bot.name += $": {i + 1}";
+                Players.Add(bot);
+            }
+        }
+
+        private void SpawnBots(BotPlayer inputBot)
+        {
+            for (var i = 0; i < MainMenuMaster.mainMenuMaster.BotsCount; i++)
+            {
+                BotPlayer bot = botHolders[i].PlaceBot(inputBot);
+                bot.Init(rulesResolver, cardsDeck, cardsPile);
+                bot.name += $": {i + 1}";
+                Players.Add(bot);
+            }
         }
 
         private void ImprovePlayersNames()
         {
             string stringToDelete = "(Clone)";
 
-            foreach (Player player in players)
+            foreach (Player player in Players)
             {
                 player.name = player.name.Remove(player.name.IndexOf(stringToDelete), stringToDelete.Length);
             }
@@ -88,7 +152,7 @@ namespace LastCard
 
         private void DistributeCards()
         {
-            foreach (Player player in players)
+            foreach (Player player in Players)
             {
                 List<Card> cards = cardsDeck.GetCards(MainMenuMaster.mainMenuMaster.InitialCardsCount);
 
@@ -102,12 +166,12 @@ namespace LastCard
 
         private async void StartGame()
         {
-            playerIndex = GetStartPlayerIndex();
-            Player player = players[playerIndex];
+            PlayerIndex = GetStartPlayerIndex();
+            Player player = Players[PlayerIndex];
             
             while (!gameIsFinished)
             {
-                player = players[playerIndex];
+                player = Players[PlayerIndex];
 
                 if (!CheckSkippingTurn(player))
                 {
@@ -123,11 +187,11 @@ namespace LastCard
 
                 if (!cardsPile.Reversed)
                 {
-                    playerIndex = GetNextPlayerIndex(playerIndex);
+                    PlayerIndex = GetNextPlayerIndex(PlayerIndex);
                 }
                 else
                 {
-                    playerIndex = GetNextPlayerIndexReversed(playerIndex);
+                    PlayerIndex = GetNextPlayerIndexReversed(PlayerIndex);
                 }
 
                 gameIsFinished = CheckIsCompleted(player);
@@ -141,9 +205,9 @@ namespace LastCard
         private void EndGame(Player winner)
         {
             GameMaster.GM.SetWinner(winner);
-            players.Remove(winner);
+            Players.Remove(winner);
             ExcludeLosers();
-            GameMaster.GM.SetRunnerUpps(players);
+            GameMaster.GM.SetRunnerUpps(Players);
             GameMaster.GM.EndGame();
         }
 
@@ -169,7 +233,7 @@ namespace LastCard
 
         private void ExcludeLosers()
         {
-            List<Player> tempPlayers = new List<Player>(players);
+            List<Player> tempPlayers = new List<Player>(Players);
             bool loserCanBeRemoved = true;
 
             while (loserCanBeRemoved)
@@ -189,14 +253,14 @@ namespace LastCard
 
                 if (loserCanBeRemoved)
                 {
-                    players.Remove(playerToRemove);
+                    Players.Remove(playerToRemove);
                 }
             }
         }
 
         private bool NobodyCanMakeTurn()
         {
-            foreach (Player player in players)
+            foreach (Player player in Players)
             {
                 if (!player.DontTurn)
                 {
@@ -209,15 +273,15 @@ namespace LastCard
 
         private Player GetWinner()
         {
-            Player winner = players.FirstOrDefault();
+            Player winner = Players.FirstOrDefault();
 
-            for (var i = 1; i < players.Count; i++)
+            for (var i = 1; i < Players.Count; i++)
             {
-                if (players[i].GetPointsNumber() < winner.GetPointsNumber())
+                if (Players[i].GetPointsNumber() < winner.GetPointsNumber())
                 {
-                    winner = players[i];
+                    winner = Players[i];
                 }
-                else if (players[i].GetPointsNumber() == winner.GetPointsNumber())
+                else if (Players[i].GetPointsNumber() == winner.GetPointsNumber())
                 {
                     return null;
                 }
@@ -259,7 +323,7 @@ namespace LastCard
             
             if (card.nominal == Nominal.Jack)
             {
-                players[GetNextPlayerIndex(playerIndex)].CanMakeTurn = false;
+                Players[GetNextPlayerIndex(PlayerIndex)].CanMakeTurn = false;
             }
 
             cardsPile.PushCard(card);
@@ -301,17 +365,17 @@ namespace LastCard
         {
             System.Random random = new System.Random();
 
-            return random.Next(0, players.Count - 1);
+            return random.Next(0, Players.Count - 1);
         }
 
         private int GetNextPlayerIndex(int index)
         {
-            return (index + 1) % players.Count;
+            return (index + 1) % Players.Count;
         }
 
         private int GetNextPlayerIndexReversed(int index)
         {
-            return (index - 1 + players.Count) % players.Count;
+            return (index - 1 + Players.Count) % Players.Count;
         }
     }
 }

@@ -10,6 +10,8 @@ namespace LastCard
         public int BotsCount = 1;
         public int InitialCardsCount = 4;
         public int MaximalPointsCount = 20;
+        public bool GameIsLoading { get; set; } = false;
+        public GameLoader loader;   
 
         [SerializeField]
         private Slider botsSlider;

@@ -20,7 +20,16 @@ namespace LastCard
         private void Awake()
         {
             ShuffleCards(cardsPrefabs);
-            cards = CreateCards();
+            MainMenuMaster menu = MainMenuMaster.mainMenuMaster;
+            
+            if (menu.GameIsLoading)
+            {
+                cards = CreateCards(menu.loader.Data.Deck.cards);
+            }
+            else
+            {
+                cards = CreateCards();
+            }
         }
 
         private List<Card> CreateCards()
@@ -30,6 +39,20 @@ namespace LastCard
             for (var i = 0; i < maxCardsAmount; i++)
             {
                 Card newCard = Instantiate(cardsPrefabs[i], transform);
+                newCard.flipper.Flip();
+                result.Add(newCard);
+            }
+            
+            return result;
+        }
+
+        private List<Card> CreateCards(List<Card> loadedCards)
+        {
+            List<Card> result = new List<Card>();
+            
+            for (var i = 0; i < loadedCards.Count; i++)
+            {
+                Card newCard = Instantiate(loadedCards[i], transform);
                 newCard.flipper.Flip();
                 result.Add(newCard);
             }
